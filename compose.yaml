@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: linkpendek
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d linkpendek"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      PORT: 3000
+      BASE_URL: http://localhost:3001
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/linkpendek
+      REDIS_URL: redis://redis:6379
+      RATE_LIMIT_PER_MIN: 20
+      PG_POOL_MAX: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/linkpendek
+      REDIS_URL: redis://redis:6379
+      WORKER_METRICS_PORT: 9101
+    command: ["npm", "run", "start:worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  redis-data:

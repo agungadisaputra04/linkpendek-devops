@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>linkpendek: persingkat link, pantau kliknya</title>
+<meta name="description" content="Persingkat link gratis dan lihat berapa kali link kamu diklik.">
+<meta property="og:title" content="linkpendek">
+<meta property="og:description" content="Persingkat link gratis dan lihat berapa kali link kamu diklik.">
+<meta property="og:type" content="website">
+<style>
+:root{--paper:#eef2f6;--ink:#0b2545;--muted:#586a82;--line:#cbd6e2;--blue:#2447e0;--mark:#ffe45e;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:680px;margin:0 auto;padding:32px 20px 64px}
+.brand{font-weight:700;letter-spacing:-.01em}
+h1{font:700 clamp(28px,6vw,42px)/1.15 Georgia,"Times New Roman",serif;margin:28px 0 8px;letter-spacing:-.02em}
+.lead{color:var(--muted);margin:0 0 24px;max-width:52ch}
+form{display:grid;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+label{display:grid;gap:4px;font-size:14px;font-weight:600}
+input,select{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);width:100%}
+.row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:11px 16px;background:var(--ink);color:#fff;cursor:pointer}
+button:hover{background:var(--blue)}button:disabled{opacity:.6;cursor:wait}
+button.ghost{background:transparent;color:var(--blue);padding:4px 10px;border:1px solid var(--line);white-space:nowrap}
+button.ghost:hover{background:var(--paper)}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.err{color:#b3261e;font-size:14px;min-height:1.3em;margin:0}
+.result{margin-top:18px;display:none}
+.short{display:inline-block;background:var(--mark);padding:4px 10px;font:700 clamp(20px,5vw,28px)/1.3 ui-monospace,Menlo,Consolas,monospace;word-break:break-all}
+.result p{margin:10px 0 0;color:var(--muted);font-size:14px}
+h2{font-size:18px;margin:36px 0 8px}
+ul.links{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+ul.links li{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+.t{min-width:0}
+.links b{display:block;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:15px}
+.links small{display:block;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.links .empty{color:var(--muted);display:block}
+#stats{display:none;margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+.total{font:700 40px/1 Georgia,serif}
+.bars{display:flex;gap:6px;height:120px;margin:14px 0 4px}
+.bars .c{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:12px;color:var(--muted)}
+.bars .f{width:100%;background:var(--blue);min-height:2px;border-radius:2px 2px 0 0}
+.days{display:flex;gap:6px;font-size:12px;color:var(--muted)}.days span{flex:1;text-align:center}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;font-size:14px}
+.cols h3{font-size:14px;margin:0 0 4px}.cols ul{margin:0;padding-left:18px}
+@media(max-width:520px){.row,.cols{grid-template-columns:1fr}}
+footer{margin-top:40px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">linkpendek</div>
+  <h1>Persingkat link, lihat siapa yang mengkliknya.</h1>
+  <p class="lead">Tempel link panjang, dapatkan link pendek yang siap dibagikan. Statistik klik 7 hari terakhir tersedia untuk setiap link.</p>
+
+  <form id="f">
+    <label>Link panjang
+      <input id="url" type="url" required placeholder="https://contoh.com/artikel/yang/sangat/panjang" autocomplete="off">
+    </label>
+    <div class="row">
+      <label>Nama link sendiri (opsional)
+        <input id="slug" type="text" placeholder="promo-lebaran" maxlength="32" autocomplete="off">
+      </label>
+      <label>Masa aktif
+        <select id="ttl">
+          <option value="">Tanpa batas</option>
+          <option value="7">7 hari</option>
+          <option value="30">30 hari</option>
+          <option value="90">90 hari</option>
+          <option value="365">365 hari</option>
+        </select>
+      </label>
+    </div>
+    <p class="err" id="err" role="alert"></p>
+    <button id="go" type="submit">Buat link pendek</button>
+  </form>
+
+  <div class="result" id="result">
+    <span class="short" id="short"></span>
+    <p><button type="button" id="copy" class="ghost">Salin link</button> Bagikan ke mana saja. Statistik ada di daftar di bawah.</p>
+  </div>
+
+  <h2>Link saya</h2>
+  <ul class="links" id="list"></ul>
+  <div id="stats" aria-live="polite"></div>
+
+  <footer id="sum"></footer>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const load = () => { try { return JSON.parse(localStorage.getItem('linkpendek') || '[]'); } catch { return []; } };
+const save = (v) => { try { localStorage.setItem('linkpendek', JSON.stringify(v.slice(0, 50))); } catch {} };
+const nf = new Intl.NumberFormat('id-ID');
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Terjadi kesalahan. Coba lagi.');
+  return data;
+}
+
+$('#f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  $('#err').textContent = '';
+  const body = { url: $('#url').value.trim() };
+  if ($('#slug').value.trim()) body.slug = $('#slug').value.trim();
+  if ($('#ttl').value) body.ttl_days = Number($('#ttl').value);
+  $('#go').disabled = true;
+  try {
+    const l = await api('/api/links', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    save([{ slug: l.slug, short_url: l.short_url, target_url: l.target_url }, ...load()]);
+    $('#short').textContent = l.short_url;
+    $('#short').dataset.url = l.short_url;
+    $('#result').style.display = 'block';
+    $('#f').reset();
+    render();
+    summary();
+  } catch (x) { $('#err').textContent = x.message; }
+  $('#go').disabled = false;
+});
+
+$('#copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('#short').dataset.url);
+    $('#copy').textContent = 'Tersalin';
+  } catch { $('#copy').textContent = 'Salin manual dari kotak kuning'; }
+  setTimeout(() => ($('#copy').textContent = 'Salin link'), 2000);
+});
+
+function render() {
+  const items = load();
+  $('#list').innerHTML = items.length
+    ? items.map((l) => `<li><div class="t"><b>${esc(l.short_url.replace(/^https?:\/\//, ''))}</b><small>${esc(l.target_url)}</small></div><button class="ghost" data-slug="${esc(l.slug)}">Lihat statistik</button></li>`).join('')
+    : '<li class="empty">Belum ada link. Buat yang pertama di atas.</li>';
+}
+$('#list').addEventListener('click', (e) => { const s = e.target.dataset && e.target.dataset.slug; if (s) stats(s); });
+
+async function stats(slug) {
+  const box = $('#stats');
+  try {
+    const d = await api('/api/links/' + encodeURIComponent(slug) + '/stats');
+    const max = Math.max(1, ...d.daily.map((x) => x.clicks));
+    const li = (arr, k) => arr.map((r) => `<li>${esc(r[k])}: ${r.clicks}</li>`).join('') || '<li>Belum ada data</li>';
+    box.innerHTML = `<div class="total">${nf.format(d.total_clicks)}</div><div>klik untuk <b>${esc(d.slug)}</b></div>
+      <div class="bars">${d.daily.map((x) => `<div class="c">${x.clicks}<div class="f" style="height:${Math.round((x.clicks / max) * 80)}%"></div></div>`).join('')}</div>
+      <div class="days">${d.daily.map((x) => `<span>${esc(x.day.slice(8))}</span>`).join('')}</div>
+      <div class="cols"><div><h3>Sumber klik</h3><ul>${li(d.top_referrers, 'referrer')}</ul></div><div><h3>Perangkat</h3><ul>${li(d.devices, 'device')}</ul></div></div>`;
+  } catch (x) { box.textContent = x.message; }
+  box.style.display = 'block';
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+async function summary() {
+  try {
+    const s = await api('/api/stats/summary');
+    $('#sum').textContent = `${nf.format(s.links)} link dibuat, ${nf.format(s.clicks)} klik dialihkan.`;
+  } catch {}
+}
+
+render();
+summary();
+</script>
+</body>
+</html>
