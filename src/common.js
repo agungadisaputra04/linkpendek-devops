@@ -5,7 +5,7 @@ const env = process.env;
 const config = {
   port: +env.PORT || 3000,
   baseUrl: (env.BASE_URL || 'http://localhost:3000').replace(/\/$/, ''),
-  databaseUrl: env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/linkpendek',
+  databaseUrl: env.DATABASE_URL,
   redisUrl: env.REDIS_URL || 'redis://localhost:6379',
   rateLimitPerMin: +env.RATE_LIMIT_PER_MIN || 20,
   workerMetricsPort: +env.WORKER_METRICS_PORT || 9101,
