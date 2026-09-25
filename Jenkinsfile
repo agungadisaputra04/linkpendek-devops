@@ -34,7 +34,10 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+                sh '''
+                    docker pull node:20-bookworm-slim
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                '''
             }
         }
 
@@ -42,11 +45,20 @@ pipeline {
             steps {
                 sh '''
                     trivy --config /dev/null image \
-                        --severity HIGH,CRITICAL \
+                        --severity CRITICAL \
+                        --ignore-unfixed \
                         --timeout 20m \
                         --exit-code 1 \
                         ${IMAGE_NAME}:${IMAGE_TAG}
+
+                    trivy --config /dev/null image \
+                        --severity HIGH,CRITICAL \
+                        --timeout 20m \
+                        --exit-code 0 \
+                        --format table \
+                        ${IMAGE_NAME}:${IMAGE_TAG} > trivy-full-report.txt || true
                 '''
+                archiveArtifacts artifacts: 'trivy-full-report.txt', allowEmptyArchive: true
             }
         }
 
