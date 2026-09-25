@@ -43,6 +43,7 @@ pipeline {
                 sh '''
                     trivy --config /dev/null image \
                         --severity HIGH,CRITICAL \
+                        --timeout 20m \
                         --exit-code 1 \
                         ${IMAGE_NAME}:${IMAGE_TAG}
                 '''
