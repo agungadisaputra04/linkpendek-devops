@@ -4,12 +4,17 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# ---- Stage 2: runtime, tanpa npm/yarn/corepack ----
+# ---- Stage 2: runtime ----
 FROM node:20-bookworm-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Buang tooling package manager bawaan base image — tidak dibutuhkan saat runtime
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# hapus tooling package manager bawaan base
 RUN rm -rf /usr/local/lib/node_modules/npm \
            /usr/local/lib/node_modules/corepack \
            /opt/yarn-* \
