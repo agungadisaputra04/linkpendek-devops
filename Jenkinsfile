@@ -1,6 +1,11 @@
 pipeline {
     agent any
 
+    triggers {
+        githubPush()
+    }
+
+
     environment {
         IMAGE_NAME = 'ghcr.io/agungadisaputra04/linkpendek-devops'
         IMAGE_TAG  = "${BUILD_NUMBER}"
