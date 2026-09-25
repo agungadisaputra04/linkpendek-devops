@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: linkpendek
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d linkpendek"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -34,8 +34,8 @@ services:
     environment:
       PORT: 3000
       BASE_URL: http://localhost:3001
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/linkpendek
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
       RATE_LIMIT_PER_MIN: 20
       PG_POOL_MAX: 10
     depends_on:
@@ -47,10 +47,10 @@ services:
   worker:
     build: .
     environment:
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/linkpendek
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
       WORKER_METRICS_PORT: 9101
-    command: ["npm", "run", "start:worker"]
+    command: ["node", "src/worker.js"]
     depends_on:
       postgres:
         condition: service_healthy
